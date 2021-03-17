@@ -132,24 +132,29 @@ void checkObject() {
 void updateConsole() {
   if (braking != brakeMem || autonomous != autoMem || atLine != lineMem || atObject != objMem) {
     Brain.Screen.clearScreen(); //Clear Text
+    Brain.Screen.setCursor(1, 1);
+    Brain.Screen.setFillColor(black);
     if (braking) {
       Brain.Screen.print("Braking: True\n");
     }
     else {
       Brain.Screen.print("Braking: False\n");
     }
+    Brain.Screen.newLine();
     if (autonomous) {
       Brain.Screen.print("Autonomous: True\n");
     }
     else {
       Brain.Screen.print("Autonomous: False\n");
     }
+    Brain.Screen.newLine();
     if (atLine) {
       Brain.Screen.print("At Line: True\n");
     }
     else {
       Brain.Screen.print("At Line: False\n");
     }
+    Brain.Screen.newLine();
     if (atObject) {
       Brain.Screen.print("At Object: True\n");
     }
@@ -174,7 +179,7 @@ void turnaround() {
 }
 void screenColor(color c) {
   Brain.Screen.setFillColor(c);
-  Brain.Screen.drawRectangle(0, 0, 500, 500);
+  Brain.Screen.drawRectangle(270, 0, 210, 272);
   updateConsole();
 }
 // ===========================================================================================================
@@ -206,10 +211,9 @@ int omniControl() {
       braking = true;
       autonomous = false;
       Controller1.rumble(rumbleShort);
-      
     }
     if (running && !braking) {
-      
+      unbrake();
       if (autonomous) { //If bot is in auto mode
         
         if (!atLine && !atObject) { //NOT at line AND NOT at Object
@@ -247,6 +251,7 @@ int omniControl() {
         }
         else if (atLine) {   //AT LINE
           screenColor(white); //White
+          halt();
           //turnaround();
           if (true) {
             Controller1.rumble(rumbleShort);
@@ -259,7 +264,7 @@ int omniControl() {
           screenColor(purple); //Purple
           updateVelocity(charge); //Set vel
           if (BorderDetector.reflectivity() <= 10) {
-            screenColor(cyan);
+            screenColor(yellow);
             braking = true;
           }
         }
