@@ -98,7 +98,7 @@ void checkLine() {
   }
 }
 void checkObject() {
-  if (Laser.objectDistance(mm) < 127.0 && Laser.objectDistance(mm) > 0.1) {
+  if (Laser.objectDistance(mm) < 100.0 && Laser.objectDistance(mm) > 0.1) {
     atObject = true;
   }
   else {
@@ -191,9 +191,11 @@ int omniControl() {
           Vision13.takeSnapshot(GREENCUBE); 
           Vision13.takeSnapshot(PURPLECUBE);
 
-          if (Vision13.objectCount > 0 && Vision13.objectCount < 3) { //Sees object
+          if ((Vision13.objectCount > 0 && Vision13.objectCount < 3)) { //Sees object
+            // || (Laser.objectDistance(mm) < 700 && Laser.objectDistance(mm) > 2)
             seeObject = true;
             objectLoc = ((Vision13.objects[Vision13_objectIndex].centerX - 157.5) / autoSensitivity) * -1.0; //Set relative object position
+            //objectLoc = 0;
             stickRotate = objectLoc;
             
             if (objectLoc > 0.0) { //Determine where object is
@@ -219,7 +221,11 @@ int omniControl() {
           screenColor(white); //White
           updateVelocity(0);
           turnaround();
-          wait(2, seconds);
+          wait(500, msec);
+          North1.spinFor(45, degrees, false);
+          South2.spinFor(-45, degrees, false);
+          East4R.spinFor(-45, degrees, false);
+          West3L.spinFor(45, degrees, true);
          }
         else if (atObject && charge > 1) {  //AT OBJECT  + CHARGE
           screenColor(purple); //Purple
