@@ -15,16 +15,6 @@
 #include<iostream>
 
 using namespace vex;
-
-// ---- INIT VISION SIGNATURES ---- //
-vision::signature ORANGECUBE (1, 4825, 9985, 7406, -3269, -2649, -2960, 1.200, 0);
-vision::signature PURPLECUBE (2, 1773, 2657, 2216, 9411, 12073, 10742, 3.800, 0);
-vision::signature GREENCUBE (3, -7489, -6181, -6836, -3821, -2819, -3320, 1.600, 0);
-vision::signature SIG_4 (4, 0, 0, 0, 0, 0, 0, 2.500, 0);
-vision::signature SIG_5 (5, 0, 0, 0, 0, 0, 0, 2.500, 0);
-vision::signature SIG_6 (6, 0, 0, 0, 0, 0, 0, 2.500, 0);
-vision::signature SIG_7 (7, 0, 0, 0, 0, 0, 0, 2.500, 0);
-vex::vision vision1 ( vex::PORT1, 34, ORANGECUBE, PURPLECUBE, GREENCUBE, SIG_4, SIG_5, SIG_6, SIG_7 );
 // ---- Initialization ---- //
 void spinMotors(); 
 void updateVelocity(int n);
@@ -184,12 +174,8 @@ int omniControl() {
     if (!braking) {
       unbrake();
       if (autonomous) { //If bot is in auto mode
-        if (!atLine && !atObject) { //NOT at line AND NOT at Object
+        if (!atLine && !atObject) { //NOT at line
           screenColor(orange); //Orange if autonomous
-          
-          Vision13.takeSnapshot(ORANGECUBE);
-          Vision13.takeSnapshot(GREENCUBE); 
-          Vision13.takeSnapshot(PURPLECUBE);
 
           if ((Vision13.objectCount > 0 && Vision13.objectCount < 3)) { //Sees object
             // || (Laser.objectDistance(mm) < 700 && Laser.objectDistance(mm) > 2)
