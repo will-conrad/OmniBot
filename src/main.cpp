@@ -25,13 +25,16 @@ vision::signature SIG_5 (5, 0, 0, 0, 0, 0, 0, 2.500, 0);
 vision::signature SIG_6 (6, 0, 0, 0, 0, 0, 0, 2.500, 0);
 vision::signature SIG_7 (7, 0, 0, 0, 0, 0, 0, 2.500, 0);
 vex::vision vision1 ( vex::PORT1, 34, ORANGECUBE, PURPLECUBE, GREENCUBE, SIG_4, SIG_5, SIG_6, SIG_7 );
-// ---- VARIABLES ---- //
-void checkLine();
+// ---- Initialization ---- //
 void spinMotors(); 
-void halt();
+void updateVelocity(int n);
 void eBrake();
 void unbrake();
-void updateVelocity(int n);
+void checkLine();
+void checkObject();
+void updateConsole();
+void turnaround();
+void screenColor(color c);
 
 int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, Vision13_objectIndex = 0;
 float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, objectLoc, autoTurnSpeed, autoFollowSpeed, autoSensitivity, charge;
@@ -156,7 +159,6 @@ void screenColor(color c) {
 }
 // ===========================================================================================================
 
-
 // ---- MAIN DRIVE CONTROL ---- //
 int omniControl() {
   //Autonomous speeds
@@ -215,7 +217,7 @@ int omniControl() {
         }
         else if (atLine) {   //AT LINE
           screenColor(white); //White
-          halt();
+          updateVelocity(0);
           turnaround();
           wait(2, seconds);
          }
