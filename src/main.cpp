@@ -73,46 +73,19 @@ void updateVelocity(int n) {
     East4R.stop();
   }
 }
-void halt() {
-  //Kill leftover sticks
-  stickRotate = 0.0;
-  stickForward = 0.0;
-  stickSideways = 0.0;
-  //Kill leftover velocity
-  /* updateVelocity() does this
-  northV = 0.0;
-  southV = 0.0;
-  westV = 0.0;
-  eastV = 0.0;
-  */
-  //Update
+void eBrake() { //
   updateVelocity(0);
-}
-void eBrake() {
-  //Disable motors
-  //running = false;
-  //Disable controller input
-  //useController = false;
-  //Set motor stopping behavior
   North1.setStopping(hold);
   South2.setStopping(hold);
   West3L.setStopping(hold);
   East4R.setStopping(hold);
-  //Kill input and velocity
-  halt();
 }
 void unbrake() {
-  //Engage motors
-  running = true;
-  //Engage controller input
-  //useController = true;
-  //Reset motor stop behavior
   North1.setStopping(coast);
   South2.setStopping(coast);
   West3L.setStopping(coast);
   East4R.setStopping(coast);
 }
-
 void checkLine() {
   if (BorderDetector.reflectivity() <= 10) {
     atLine = true;
@@ -169,7 +142,6 @@ void updateConsole() {
   }
 }
 void turnaround() {
-  halt();
   updateVelocity(50);
   float wheelDeg = 645.0;
   North1.spinFor(wheelDeg, degrees, false);
@@ -195,27 +167,21 @@ int omniControl() {
   running = true;
   atLine = false;
   atObject = false;
-  //useController = true;
   
   autonomous = false;
   //Forever
   while (true) {
-    
-    //updateConsole();
     checkLine(); 
     checkObject();
     
-    
-
     if (StopButton.pressing()) {
       braking = true;
       autonomous = false;
       Controller1.rumble(rumbleShort);
     }
-    if (running && !braking) {
+    if (!braking) {
       unbrake();
       if (autonomous) { //If bot is in auto mode
-        
         if (!atLine && !atObject) { //NOT at line AND NOT at Object
           screenColor(orange); //Orange if autonomous
           
@@ -234,9 +200,7 @@ int omniControl() {
             else {
               objLeft = true;
             }
-            
-            stickForward = autoFollowSpeed; //Go forward
-            
+            stickForward = autoFollowSpeed; //Track object
           }
           else { //Didnt see object
             seeObject = false;
@@ -252,14 +216,9 @@ int omniControl() {
         else if (atLine) {   //AT LINE
           screenColor(white); //White
           halt();
-          //turnaround();
-          if (true) {
-            Controller1.rumble(rumbleShort);
-          
-
-            atLine = false;
-          }
-        }
+          turnaround();
+          wait(2, seconds);
+         }
         else if (atObject && charge > 1) {  //AT OBJECT  + CHARGE
           screenColor(purple); //Purple
           updateVelocity(charge); //Set vel
@@ -269,7 +228,7 @@ int omniControl() {
           }
         }
         else if (atObject && charge == 0) {  // AT OBJECT
-          halt();
+          updateVelocity(0);
           braking = true;
         }
       }
@@ -278,29 +237,17 @@ int omniControl() {
         stickRotate = Controller1.Axis1.position();
         stickForward = Controller1.Axis3.position();
         stickSideways = Controller1.Axis4.position();
-        /*
-        if (useController) { useController might be redundant 
-          // Continually set joystick inputs to variables so they can be changed by autonomy code later
-          screenColor(green);
-          stickRotate = Controller1.Axis1.position();
-          stickForward = Controller1.Axis3.position();
-          stickSideways = Controller1.Axis4.position();
-        }
-        */
       }
       if (!atObject) {
         updateVelocity(1);
       }
-      
-      
     }
-    else if (!running || braking) {
+    else if (braking) {
       screenColor(red);
       eBrake();
     }
   }
-  wait(5, msec);
-  
+  wait(5, msec); 
   return 0;
 }
 
@@ -325,6 +272,7 @@ int main() {
   Controller1.ButtonR1.pressed(onEvent_ButtonR1Pressed);
 
   wait(15, msec);
+  screenColor(green);
   
   omniControl();
 }
