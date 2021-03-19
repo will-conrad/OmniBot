@@ -28,7 +28,7 @@ bool degMove(int dir, float in, float deg, int v);
 void screenColor(color c);
 
 int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, Vision13_objectIndex = 0;
-float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, objectLoc, autoTurnSpeed, autoFollowSpeed, autoSensitivity, charge;
+float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, objectLoc, autoTurnSpeed, autoFollowSpeed, autoFocus, charge;
 bool useController, autonomous, running, objectExists, objLeft, braking, atLine, nearObject, seeObject, brakeMem, autoMem, lineMem, objMem;
 
 // ---- FUNCTIONS ---- //
@@ -100,7 +100,12 @@ void checkObject() {
   }
 }
 bool laserInRange(int range, distanceUnits units) {
-  if (LaserL.objectDistance(units) <= range && )
+  if ((LaserL.objectDistance(units) <= range && LaserL.isObjectDetected()) || (LaserR.objectDistance(units) <= range && LaserR.isObjectDetected())) {
+    return true;
+  }
+  else {
+    return false;
+  }
 }
 void updateConsole() {
   if (braking != brakeMem || autonomous != autoMem || atLine != lineMem || nearObject != objMem) {
@@ -202,9 +207,8 @@ int omniControl() {
   //Autonomous speeds
   autoFollowSpeed = 20.0;
   autoTurnSpeed   = 20.0;
-  autoSensitivity = 4;   //Lower = more jumpy (Overcorrects)
+  autoFocus = 10;   //Correct to center robot
   charge = 50;
-  running = true;
   atLine = false;
   nearObject = false;
   
@@ -229,15 +233,14 @@ int omniControl() {
           if (laserInRange(750, mm)) { //Sees object
             // || (Laser.objectDistance(mm) < 700 && Laser.objectDistance(mm) > 2)
             seeObject = true;
-            objectLoc = ((Vision13.objects[Vision13_objectIndex].centerX - 157.5) / autoSensitivity) * -1.0; //Set relative object position
-            //objectLoc = 0;
-            stickRotate = objectLoc;
             
             if (LaserL.objectDistance(mm) <= 700 && (LaserR.objectDistance(mm) > 700 || LaserR.isObjectDetected() == false)) { //Determine where object is
               objLeft = true;
+              stickRotate = autoFocus * -1;
             }
             else if (LaserR.objectDistance(mm) <= 700 && (LaserL.objectDistance(mm) > 700 || LaserL.isObjectDetected() == false)){
               objLeft = false;
+              stickRotate = autoFocus;
             }
             stickForward = autoFollowSpeed; //Track object
           }
@@ -254,8 +257,8 @@ int omniControl() {
         }
         else if (atLine) {   //AT LINE
           screenColor(white); //White
-          degMove(5, 0, 180, 50); //Spin 180deg 
-          degMove(1, 7, 0, 40); //Move forward 7 in
+          degMove(5, 0, 180, 50); //Spin 180deg ()
+          degMove(1, 7, 0, 40); //Move forward 7 in (V=40)
         }
         else if (nearObject && charge > 1) {  //AT OBJECT  + CHARGE
           if (BorderDetector.reflectivity() <= 10) { //Check at line
