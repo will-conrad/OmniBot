@@ -1,5 +1,5 @@
 # OmniBot
-![OmniBot Icon](https://drive.google.com/file/d/1DbbkSveuHWy_y8W72mxoZKCprfGXLVge/view)
+![OmniBot Icon](https://ibb.co/NVvmm2K)
 VEXcode Pro code for Omni Bot
 
 Controls holonomic drive and runs autonomy code
