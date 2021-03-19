@@ -241,10 +241,10 @@ int omniControl() {
         stickSideways = Controller1.Axis4.position();
       }
       if (!atObject) {
-        updateVelocity(1); //Update drive normally if not charging
+        updateVelocity(1);
       }
     }
-    else if (braking) { //Brake if braking == true
+    else if (braking) {
       screenColor(red);
       eBrake();
     }
@@ -266,6 +266,7 @@ void onEvent_ButtonR1Pressed() { //R1 Pressed
   autonomous = !autonomous;
 }
 
+
 // ---- REGISTER EVENT HANDLERS ---- // -- INT MAIN -- //
 int main() {
   Controller1.ButtonL1.pressed(onEvent_ButtonL1Pressed);
@@ -273,7 +274,7 @@ int main() {
   Controller1.ButtonR1.pressed(onEvent_ButtonR1Pressed);
 
   wait(15, msec);
-  
   screenColor(green);
+  
   omniControl();
 }
