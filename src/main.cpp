@@ -15,7 +15,7 @@
 #include<iostream>
 
 using namespace vex;
-//Camera
+
 // ---- INIT VISION SIGNATURES ---- //
 vision::signature ORANGECUBE (1, 4825, 9985, 7406, -3269, -2649, -2960, 1.200, 0);
 vision::signature PURPLECUBE (2, 1773, 2657, 2216, 9411, 12073, 10742, 3.800, 0);
