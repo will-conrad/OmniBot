@@ -1,28 +1,29 @@
 // ---- START VEXCODE CONFIGURED DEVICES ----
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
-// Controller1          controller                    
-// North1               motor         1               
-// South2               motor         2               
-// West3L               motor         3               
-// East4R               motor         4               
-// LaserL               distance      10              
-// BorderDetector       line          B               
-// StopButton           bumper        C               
-// LaserR               distance      11              
+// Controller1          controller
+// North1               motor         1
+// South2               motor         2
+// West3L               motor         3
+// East4R               motor         4
+// LaserL               distance      10
+// BorderDetector       line          B
+// StopButton           bumper        C
+// LaserR               distance      11
 // ---- END VEXCODE CONFIGURED DEVICES ----
 #include<vex.h>
 #include<iostream>
 
 using namespace vex;
 // ---- Initialization ---- //
-void spinMotors(); 
+void spinMotors();
 void updateVelocity(int n, bool useIn);
 void eBrake();
 void unbrake();
 float LaserAvg(distanceUnits units);
 void checkLine();
 void checkObject();
+bool laserInRange(int range, distanceUnits units);
 void updateConsole();
 bool degMove(int dir, float in, float deg, int v);
 void screenColor(color c);
@@ -51,14 +52,14 @@ void updateVelocity(int n, bool useIn) {
     South2.setVelocity(southV, percent);
     West3L.setVelocity(westV, percent);
     East4R.setVelocity(eastV, percent);
-    
+
   }
   else if (useIn && n != 0) {
     North1.setVelocity(n, percent);
     South2.setVelocity(n, percent);
     West3L.setVelocity(n, percent);
     East4R.setVelocity(n, percent);
-    
+
   }
   else if (useIn && n == 0) {
     North1.stop();
@@ -146,13 +147,6 @@ void updateConsole() {
     objMem = nearObject;
   }
 }
-
-void screenColor(color c) {
-  Brain.Screen.setFillColor(c);
-  Brain.Screen.drawRectangle(270, 0, 210, 272);
-  updateConsole();
-}
-
 bool degMove(int dir, float in, float deg, int v) {
   updateVelocity(v, true);
   if (dir == 1) { //Forward
@@ -199,7 +193,11 @@ bool degMove(int dir, float in, float deg, int v) {
   }
   return true;
 }
-
+void screenColor(color c) {
+  Brain.Screen.setFillColor(c);
+  Brain.Screen.drawRectangle(270, 0, 210, 272);
+  updateConsole();
+}
 // ===========================================================================================================
 
 // ---- MAIN DRIVE CONTROL ---- //
@@ -211,13 +209,13 @@ int omniControl() {
   charge = 50;
   atLine = false;
   nearObject = false;
-  
+
   autonomous = false;
   //Forever
   while (true) {
-    checkLine(); 
+    checkLine();
     checkObject();
-    
+
     if (StopButton.pressing()) {
       braking = true;
       autonomous = false;
@@ -226,14 +224,14 @@ int omniControl() {
     if (!braking) {
       unbrake();
       if (autonomous) { //If bot is in auto mode
-        
+
         if (!atLine && !nearObject) { //NOT at line
           screenColor(orange); //Orange if autonomous
 
           if (laserInRange(750, mm)) { //Sees object
             // || (Laser.objectDistance(mm) < 700 && Laser.objectDistance(mm) > 2)
             seeObject = true;
-            
+
             if (LaserL.objectDistance(mm) <= 700 && (LaserR.objectDistance(mm) > 700 || LaserR.isObjectDetected() == false)) { //Determine where object is
               objLeft = true;
               stickRotate = autoFocus * -1;
@@ -292,7 +290,7 @@ int omniControl() {
       eBrake();
     }
   }
-  wait(5, msec); 
+  wait(5, msec);
   return 0;
 }
 
@@ -316,7 +314,7 @@ int main() {
   Controller1.ButtonR1.pressed(onEvent_ButtonR1Pressed);
 
   wait(15, msec);
-  
+
   updateConsole();
   omniControl();
 }
