@@ -30,7 +30,7 @@ bool degMove(int dir, float in, float deg, int v);
 
 int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0;
 float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, autoTurnSpeed, autoFollowSpeed, autoFocus, charge;
-bool init = true, useController, autonomous, running, objectExists, objLeft, braking, atLine, nearObject, seeObject, brakeMem, autoMem, lineMem, objMem;
+bool init = true, useController, autonomous, objLeft, braking, atLine, nearObject, seeObject, brakeMem, autoMem, lineMem, detectMem, objMem;
 
 // ---- FUNCTIONS ---- //
 void spinMotors() {
@@ -109,7 +109,7 @@ bool laserInRange(int range, distanceUnits units) {
   }
 }
 void updateConsole() {
-  if (init || braking != brakeMem || autonomous != autoMem || atLine != lineMem || nearObject != objMem) {
+  if (init || braking != brakeMem || autonomous != autoMem || atLine != lineMem || seeObject != detectMem || nearObject != objMem) {
     Brain.Screen.clearScreen(); //Clear Text
     Brain.Screen.setCursor(1, 1);
     Brain.Screen.setFillColor(black);
@@ -134,6 +134,13 @@ void updateConsole() {
       Brain.Screen.print("At Line: False\n");
     }
     Brain.Screen.newLine();
+    if (seeObject) {
+      Brain.Screen.print("Detects Object: True\n");
+    }
+    else {
+      Brain.Screen.print("Detects Object: False\n");
+    }
+    Brain.Screen.newLine();
     if (nearObject) {
       Brain.Screen.print("Near Object: True\n");
     }
@@ -145,6 +152,7 @@ void updateConsole() {
     brakeMem = braking;
     autoMem = autonomous;
     lineMem = atLine;
+    detectMem = seeObject;
     objMem = nearObject;
   }
 }
@@ -308,6 +316,6 @@ int main() {
 
   wait(15, msec);
 
-  updateConsole();
+  screenColor(green);
   omniControl();
 }
