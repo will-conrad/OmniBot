@@ -20,13 +20,13 @@ void spinMotors();
 void updateVelocity(int n, bool useIn);
 void eBrake();
 void unbrake();
-float LaserAvg(distanceUnits units);
+void updateConsole();
 void checkLine();
 void checkObject();
-bool laserInRange(int range, distanceUnits units);
-void updateConsole();
-bool degMove(int dir, float in, float deg, int v);
 void screenColor(color c);
+float LaserAvg(distanceUnits units);
+bool laserInRange(int range, distanceUnits units);
+bool degMove(int dir, float in, float deg, int v);
 
 int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, Vision13_objectIndex = 0;
 float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, objectLoc, autoTurnSpeed, autoFollowSpeed, autoFocus, charge;
@@ -203,20 +203,17 @@ void screenColor(color c) {
 // ---- MAIN DRIVE CONTROL ---- //
 int omniControl() {
   //Autonomous speeds
-  autoFollowSpeed = 20.0;
-  autoTurnSpeed   = 20.0;
-  autoFocus = 10;   //Correct to center robot
-  charge = 50;
-  atLine = false;
-  nearObject = false;
-
-  autonomous = false;
+  autoFollowSpeed = 20.0; //Object track/approach speed
+  autoTurnSpeed   = 20.0; //Looking for object spin speed
+  autoFocus = 10;   //Correct to center strength
+  charge = 50; //nearObject charge velocity
+  atLine = false, nearObject = false, autonomous = false;
   //Forever
-  while (true) {
-    checkLine();
-    checkObject();
+  while (true) { //Run Forever
+    checkLine(); //Check if over boundary
+    checkObject(); //Check if near object
 
-    if (StopButton.pressing()) {
+    if (StopButton.pressing()) { //Emergency stop button
       braking = true;
       autonomous = false;
       Controller1.rumble(rumbleShort);
