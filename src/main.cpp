@@ -28,9 +28,9 @@ float LaserAvg(distanceUnits units);
 bool laserInRange(int range, distanceUnits units);
 bool degMove(int dir, float in, float deg, int v);
 
-int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, Vision13_objectIndex = 0;
-float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, objectLoc, autoTurnSpeed, autoFollowSpeed, autoFocus, charge;
-bool useController, autonomous, running, objectExists, objLeft, braking, atLine, nearObject, seeObject, brakeMem, autoMem, lineMem, objMem;
+int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0;
+float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, autoTurnSpeed, autoFollowSpeed, autoFocus, charge;
+bool init = true, useController, autonomous, running, objectExists, objLeft, braking, atLine, nearObject, seeObject, brakeMem, autoMem, lineMem, objMem;
 
 // ---- FUNCTIONS ---- //
 void spinMotors() {
@@ -109,7 +109,7 @@ bool laserInRange(int range, distanceUnits units) {
   }
 }
 void updateConsole() {
-  if (braking != brakeMem || autonomous != autoMem || atLine != lineMem || nearObject != objMem) {
+  if (init || braking != brakeMem || autonomous != autoMem || atLine != lineMem || nearObject != objMem) {
     Brain.Screen.clearScreen(); //Clear Text
     Brain.Screen.setCursor(1, 1);
     Brain.Screen.setFillColor(black);
@@ -141,6 +141,7 @@ void updateConsole() {
       Brain.Screen.print("Near Object: False\n");
     }
 
+    init = false;
     brakeMem = braking;
     autoMem = autonomous;
     lineMem = atLine;
@@ -212,78 +213,73 @@ int omniControl() {
   while (true) { //Run Forever
     checkLine(); //Check if over boundary
     checkObject(); //Check if near object
-
     if (StopButton.pressing()) { //Emergency stop button
       braking = true;
       autonomous = false;
       Controller1.rumble(rumbleShort);
     }
-    if (!braking) {
-      unbrake();
-      if (autonomous) { //If bot is in auto mode
-
-        if (!atLine && !nearObject) { //NOT at line
-          screenColor(orange); //Orange if autonomous
-
-          if (laserInRange(750, mm)) { //Sees object
-            // || (Laser.objectDistance(mm) < 700 && Laser.objectDistance(mm) > 2)
+    if (!braking) { //Not breaking
+      unbrake(); //Release wheels
+      if (autonomous) { //If bot is in autonomous mode
+        if (!atLine && !nearObject) { //Not over line AND not near object
+          screenColor(orange); //Set cortex color to ORANGE
+          if (laserInRange(700, mm)) { //Object obstructs either laser
             seeObject = true;
-
-            if (LaserL.objectDistance(mm) <= 700 && (LaserR.objectDistance(mm) > 700 || LaserR.isObjectDetected() == false)) { //Determine where object is
+            if (LaserL.objectDistance(mm) <= 700 && (LaserR.objectDistance(mm) > 700 || LaserR.isObjectDetected() == false)) { //Only LaserL sees object
               objLeft = true;
-              stickRotate = autoFocus * -1;
+              stickRotate = autoFocus * -1; //Rotate left
             }
-            else if (LaserR.objectDistance(mm) <= 700 && (LaserL.objectDistance(mm) > 700 || LaserL.isObjectDetected() == false)){
+            else if (LaserR.objectDistance(mm) <= 700 && (LaserL.objectDistance(mm) > 700 || LaserL.isObjectDetected() == false)){ //Only LaserR sees object
               objLeft = false;
-              stickRotate = autoFocus;
+              stickRotate = autoFocus; //Rotate right
             }
-            stickForward = autoFollowSpeed; //Track object
+            stickForward = autoFollowSpeed; //Track object at autoFollowSpeed velocity
           }
-          else { //Didnt see object
+          else { //If object not in range
             seeObject = false;
             stickForward = 0.0;
             if (objLeft) {
-              stickRotate = autoTurnSpeed * -1.0;
+              stickRotate = autoTurnSpeed * -1.0; //Rotate left based on last known object direction
             }
             else {
-              stickRotate = autoTurnSpeed;
+              stickRotate = autoTurnSpeed; //Rotate right based on last known object direction
             }
           }
+          updateVelocity(1, false);
+          spinMotors();
         }
-        else if (atLine) {   //AT LINE
-          screenColor(white); //White
-          degMove(5, 0, 180, 50); //Spin 180deg ()
-          degMove(1, 7, 0, 40); //Move forward 7 in (V=40)
+        else if (atLine) { //If robot over line
+          screenColor(white); //Set cortex color to WHITE
+          degMove(5, 0, 180, 50); //Spin 180deg with a velocity of 50
+          degMove(1, 7, 0, 40); //Move forward 7in with a velocity of 40
         }
-        else if (nearObject && charge > 1) {  //AT OBJECT  + CHARGE
-          if (BorderDetector.reflectivity() <= 10) { //Check at line
-            screenColor(white);
+        else if (nearObject && charge > 1) {  //If near object AND charge velocity set
+          if (BorderDetector.reflectivity() <= 10) { //Check if at arena border or robot picked up
+            screenColor(white); //Set cortex color to WHITE
             braking = true;
           }
-          else {
-            screenColor(purple); //Purple
-            updateVelocity(charge, true); //Set vel
-            spinMotors();
+          else { //Charge sequence
+            screenColor(purple); //Set cortex color to PURPLE
+            updateVelocity(charge, true); //Set velocity to charge velocity
+            spinMotors(); //Update motor spin
           }
         }
-        else if (nearObject && charge == 0) {  // AT OBJECT NO CHARGE
+        else if (nearObject && charge == 0) { //If near object AND no charge velocity set
           updateVelocity(0, true); //Stop
           braking = true;
         }
       }
-      else {  //MANUAL CONTROL
-        screenColor(green);
+      else { //Use controller input
+        screenColor(green); //Set cortex color to GREEN
         stickRotate = Controller1.Axis1.position();
         stickForward = Controller1.Axis3.position();
         stickSideways = Controller1.Axis4.position();
-      }
-      if (!nearObject) {
-        updateVelocity(1, false); //Update drive normally if not charging
+        updateVelocity(1, false); //Update velocity by stick input
         spinMotors();
       }
     }
-    else if (braking) { //Brake if braking == true
-      screenColor(red);
+    else if (braking) {
+      screenColor(red); //Set cortex color to GREEN
       eBrake();
     }
   }
