@@ -28,9 +28,9 @@ float LaserAvg(distanceUnits units);
 bool laserInRange(int range, distanceUnits units);
 bool degMove(int dir, float in, float deg, int v);
 
-int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0;
+int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, range;
 float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, autoTurnSpeed, autoFollowSpeed, autoFocus, charge;
-bool init = true, useController, autonomous, objLeft, braking, atLine, nearObject, seeObject, brakeMem, autoMem, lineMem, detectMem, objMem;
+bool init = true, useController, autonomous, objLeft, braking, atLine, nearObject, seeObject, brakeMem, autoMem, lineMem, detectMem, objMem, leftMem, inRange;
 
 // ---- FUNCTIONS ---- //
 void spinMotors() {
@@ -85,7 +85,7 @@ float laserAvg(distanceUnits units) {
   return (LaserL.objectDistance(units) + LaserR.objectDistance(units)) / 2;
 }
 void checkLine() {
-  if (BorderDetector.reflectivity() <= 10) {
+  if (BorderDetector.value(percent) <= 10) {
     atLine = true;
   }
   else {
@@ -101,7 +101,7 @@ void checkObject() {
   }
 }
 bool laserInRange(int range, distanceUnits units) {
-  if ((LaserL.objectDistance(units) <= range && LaserL.isObjectDetected()) || (LaserR.objectDistance(units) <= range && LaserR.isObjectDetected())) {
+  if ((LaserL.objectDistance(units) <= range && LaserL.objectDistance(mm) > 1) || (LaserR.objectDistance(units) <= range && LaserR.objectDistance(mm) > 1)) {
     return true;
   }
   else {
@@ -109,7 +109,7 @@ bool laserInRange(int range, distanceUnits units) {
   }
 }
 void updateConsole() {
-  if (init || braking != brakeMem || autonomous != autoMem || atLine != lineMem || seeObject != detectMem || nearObject != objMem) {
+  if (init || braking != brakeMem || autonomous != autoMem || atLine != lineMem || laserInRange(range, mm) != detectMem || nearObject != objMem || objLeft != leftMem) {
     Brain.Screen.clearScreen(); //Clear Text
     Brain.Screen.setCursor(1, 1);
     Brain.Screen.setFillColor(black);
@@ -134,7 +134,7 @@ void updateConsole() {
       Brain.Screen.print("At Line: False\n");
     }
     Brain.Screen.newLine();
-    if (seeObject) {
+    if (laserInRange(range, mm)) {
       Brain.Screen.print("Detects Object: True\n");
     }
     else {
@@ -147,13 +147,22 @@ void updateConsole() {
     else {
       Brain.Screen.print("Near Object: False\n");
     }
+    Brain.Screen.newLine();
+    if (objLeft) {
+      Brain.Screen.print("Object is Left\n");
+    }
+    else {
+      Brain.Screen.print("Object is Right\n");
+    }
+    
 
     init = false;
     brakeMem = braking;
     autoMem = autonomous;
     lineMem = atLine;
-    detectMem = seeObject;
+    detectMem = laserInRange(range, mm);
     objMem = nearObject;
+    leftMem = objLeft;
   }
 }
 bool degMove(int dir, float in, float deg, int v) {
@@ -207,62 +216,96 @@ void screenColor(color c) {
   Brain.Screen.drawRectangle(270, 0, 210, 272);
   updateConsole();
 }
+void updateDirection(int r) {
+  if (LaserL.objectDistance(mm) <= r && (LaserR.objectDistance(mm) > LaserL.objectDistance(mm) + 20)) { //Only LaserL sees object
+    objLeft = true;
+    stickRotate = autoFocus * -1; //Rotate left
+  }
+  else if (LaserR.objectDistance(mm) <= r && (LaserL.objectDistance(mm) > LaserR.objectDistance(mm) + 20)) { //Only LaserR sees object
+    objLeft = false;
+    stickRotate = autoFocus; //Rotate right
+  }
+}
 // ===========================================================================================================
 
 // ---- MAIN DRIVE CONTROL ---- //
 int omniControl() {
   //Autonomous speeds
-  autoFollowSpeed = 20.0; //Object track/approach speed
+  autoFollowSpeed = 25.0; //Object track/approach speed
   autoTurnSpeed   = 20.0; //Looking for object spin speed
-  autoFocus = 10;   //Correct to center strength
+  autoFocus = 15;   //Correct to center strength
   charge = 50; //nearObject charge velocity
+  range = 800;
   atLine = false, nearObject = false, autonomous = false;
   //Forever
   while (true) { //Run Forever
     checkLine(); //Check if over boundary
     checkObject(); //Check if near object
+    
+    
+    
+
     if (StopButton.pressing()) { //Emergency stop button
       braking = true;
       autonomous = false;
       Controller1.rumble(rumbleShort);
     }
+
     if (!braking) { //Not breaking
       unbrake(); //Release wheels
       if (autonomous) { //If bot is in autonomous mode
         if (!atLine && !nearObject) { //Not over line AND not near object
-          screenColor(orange); //Set cortex color to ORANGE
-          if (laserInRange(700, mm)) { //Object obstructs either laser
+          //screenColor(orange); //Set cortex color to ORANGE
+          
+          if (laserInRange(range, mm)) { //Object obstructs either laser
+            screenColor(yellow);
+            updateDirection(range);
             seeObject = true;
-            if (LaserL.objectDistance(mm) <= 700 && (LaserR.objectDistance(mm) > 700 || LaserR.isObjectDetected() == false)) { //Only LaserL sees object
+            if (LaserL.objectDistance(mm) <= range && (LaserR.objectDistance(mm) > 500)) { //Only LaserL sees object
               objLeft = true;
               stickRotate = autoFocus * -1; //Rotate left
             }
-            else if (LaserR.objectDistance(mm) <= 700 && (LaserL.objectDistance(mm) > 700 || LaserL.isObjectDetected() == false)){ //Only LaserR sees object
+            if (LaserR.objectDistance(mm) <= range && (LaserL.objectDistance(mm) > 500)) { //Only LaserR sees object
               objLeft = false;
               stickRotate = autoFocus; //Rotate right
             }
+            else {
+              stickRotate = 0;
+            }
+            
             stickForward = autoFollowSpeed; //Track object at autoFollowSpeed velocity
           }
+          
+          
+          
           else { //If object not in range
+            screenColor(orange); //Set cortex color to ORANGE
             seeObject = false;
+            updateConsole();
             stickForward = 0.0;
+            
             if (objLeft) {
               stickRotate = autoTurnSpeed * -1.0; //Rotate left based on last known object direction
             }
+            
             else {
               stickRotate = autoTurnSpeed; //Rotate right based on last known object direction
             }
           }
+          
+          
           updateVelocity(1, false);
           spinMotors();
+        
         }
         else if (atLine) { //If robot over line
           screenColor(white); //Set cortex color to WHITE
           degMove(5, 0, 180, 50); //Spin 180deg with a velocity of 50
           degMove(1, 7, 0, 40); //Move forward 7in with a velocity of 40
+          autonomous = false;
         }
         else if (nearObject && charge > 1) {  //If near object AND charge velocity set
-          if (BorderDetector.reflectivity() <= 10) { //Check if at arena border or robot picked up
+          if (BorderDetector.value(percent) <= 10) { //Check if at arena border or robot picked up
             screenColor(white); //Set cortex color to WHITE
             braking = true;
           }
@@ -290,8 +333,9 @@ int omniControl() {
       screenColor(red); //Set cortex color to GREEN
       eBrake();
     }
+    wait(5, msec);
   }
-  wait(5, msec);
+  
   return 0;
 }
 
