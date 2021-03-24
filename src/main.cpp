@@ -29,7 +29,7 @@ bool laserInRange(int range, distanceUnits units);
 bool degMove(int dir, float in, float deg, int v);
 
 int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, range;
-float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, autoTurnSpeed, autoFollowSpeed, autoFocus, charge;
+float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, autoTurnSpeed, autoFollowSpeed, autoFocus, charge, distLMem, distRMem;
 bool init = true, useController, autonomous, objLeft, braking, atLine, nearObject, seeObject, brakeMem, autoMem, lineMem, detectMem, objMem, leftMem, inRange;
 
 // ---- FUNCTIONS ---- //
@@ -225,6 +225,40 @@ void updateDirection(int r) {
     objLeft = false;
     stickRotate = autoFocus; //Rotate right
   }
+  else {
+    stickRotate = 0;
+  }
+}
+void laserDistanceOut() {
+  if (LaserL.objectDistance(mm) != distLMem) {
+    Brain.Screen.clearLine(1);
+    Brain.Screen.setCursor(Brain.Screen.row(), 1);
+    
+    Controller1_precision = 1;
+    Controller1.Screen.setCursor(1, 1);
+    Controller1.Screen.print("LaserL: ");
+    Controller1.Screen.print(LaserL.objectDistance(mm));
+
+    distLMem = LaserL.objectDistance(mm);
+  }
+  if (LaserR.objectDistance(mm) != distRMem) {
+    Brain.Screen.clearLine(2);
+    Brain.Screen.setCursor(Brain.Screen.row(), 1);
+    
+    Controller1_precision = 1;
+    Controller1.Screen.setCursor(2, 1);
+    Controller1.Screen.print("LaserR: ");
+    Controller1.Screen.print(LaserR.objectDistance(mm));
+
+    distRMem = LaserR.objectDistance(mm);
+  }
+}
+void checkButton() {
+  if (StopButton.pressing()) { //Emergency stop button
+      braking = true;
+      autonomous = false;
+      Controller1.rumble(rumbleShort);
+  }
 }
 // ===========================================================================================================
 
@@ -232,24 +266,17 @@ void updateDirection(int r) {
 int omniControl() {
   //Autonomous speeds
   autoFollowSpeed = 25.0; //Object track/approach speed
-  autoTurnSpeed   = 20.0; //Looking for object spin speed
-  autoFocus = 15;   //Correct to center strength
-  charge = 50; //nearObject charge velocity
-  range = 800;
+  autoTurnSpeed = 20.0;//-//Looking for object spin speed
+  autoFocus = 15; //------//Correct to center strength
+  charge = 50; //---------//nearObject charge velocity
+  range = 500;
   atLine = false, nearObject = false, autonomous = false;
   //Forever
   while (true) { //Run Forever
     checkLine(); //Check if over boundary
     checkObject(); //Check if near object
-    
-    
-    
-
-    if (StopButton.pressing()) { //Emergency stop button
-      braking = true;
-      autonomous = false;
-      Controller1.rumble(rumbleShort);
-    }
+    laserDistanceOut(); //Output laser distance to controller
+    checkButton();
 
     if (!braking) { //Not breaking
       unbrake(); //Release wheels
@@ -261,17 +288,22 @@ int omniControl() {
             screenColor(yellow);
             updateDirection(range);
             seeObject = true;
-            if (LaserL.objectDistance(mm) <= range && (LaserR.objectDistance(mm) > 500)) { //Only LaserL sees object
-              objLeft = true;
-              stickRotate = autoFocus * -1; //Rotate left
+            
+            /*
+            if ((LaserL.objectDistance(mm) <= range && (LaserR.objectDistance(mm) > 500)) || (LaserR.objectDistance(mm) <= range && (LaserL.objectDistance(mm) > 500))) {
+              if (LaserL.objectDistance(mm) <= range && (LaserR.objectDistance(mm) > 500)) { //Only LaserL sees object
+                objLeft = true;
+                stickRotate = autoFocus * -1; //Rotate left
+              }
+              else if (LaserR.objectDistance(mm) <= range && (LaserL.objectDistance(mm) > 500)) { //Only LaserR sees object
+                objLeft = false;
+                stickRotate = autoFocus; //Rotate right
+              }
+              else {
+                stickRotate = 0;
+              }
             }
-            if (LaserR.objectDistance(mm) <= range && (LaserL.objectDistance(mm) > 500)) { //Only LaserR sees object
-              objLeft = false;
-              stickRotate = autoFocus; //Rotate right
-            }
-            else {
-              stickRotate = 0;
-            }
+            */
             
             stickForward = autoFollowSpeed; //Track object at autoFollowSpeed velocity
           }
