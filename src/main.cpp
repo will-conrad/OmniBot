@@ -7,9 +7,9 @@
 // West3L               motor         3
 // East4R               motor         4
 // LaserL               distance      10
+// LaserR               distance      11
 // BorderDetector       line          B
 // StopButton           bumper        C
-// LaserR               distance      11
 // ---- END VEXCODE CONFIGURED DEVICES ----
 #include<vex.h>
 #include<iostream>

@@ -14,9 +14,9 @@ motor South2 = motor(PORT2, ratio18_1, true);
 motor West3L = motor(PORT3, ratio18_1, false);
 motor East4R = motor(PORT4, ratio18_1, true);
 distance LaserL = distance(PORT10);
+distance LaserR = distance(PORT11);
 line BorderDetector = line(Brain.ThreeWirePort.B);
 bumper StopButton = bumper(Brain.ThreeWirePort.C);
-distance LaserR = distance(PORT11);
 
 // VEXcode generated functions
 // define variable for remote controller enable/disable

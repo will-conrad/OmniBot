@@ -9,9 +9,9 @@ extern motor South2;
 extern motor West3L;
 extern motor East4R;
 extern distance LaserL;
+extern distance LaserR;
 extern line BorderDetector;
 extern bumper StopButton;
-extern distance LaserR;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Pro.
