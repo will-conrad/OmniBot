@@ -154,7 +154,7 @@ void updateConsole() {
     else {
       Brain.Screen.print("Object is Right\n");
     }
-    
+
 
     init = false;
     brakeMem = braking;
@@ -233,7 +233,7 @@ void laserDistanceOut() {
   if (LaserL.objectDistance(mm) != distLMem) {
     Brain.Screen.clearLine(1);
     Brain.Screen.setCursor(Brain.Screen.row(), 1);
-    
+
     Controller1_precision = 1;
     Controller1.Screen.setCursor(1, 1);
     Controller1.Screen.print("LaserL: ");
@@ -244,7 +244,7 @@ void laserDistanceOut() {
   if (LaserR.objectDistance(mm) != distRMem) {
     Brain.Screen.clearLine(2);
     Brain.Screen.setCursor(Brain.Screen.row(), 1);
-    
+
     Controller1_precision = 1;
     Controller1.Screen.setCursor(2, 1);
     Controller1.Screen.print("LaserR: ");
@@ -271,7 +271,6 @@ int omniControl() {
   charge = 50; //---------//nearObject charge velocity
   range = 500;
   atLine = false, nearObject = false, autonomous = false;
-  //Forever
   while (true) { //Run Forever
     checkLine(); //Check if over boundary
     checkObject(); //Check if near object
@@ -283,12 +282,12 @@ int omniControl() {
       if (autonomous) { //If bot is in autonomous mode
         if (!atLine && !nearObject) { //Not over line AND not near object
           //screenColor(orange); //Set cortex color to ORANGE
-          
+
           if (laserInRange(range, mm)) { //Object obstructs either laser
             screenColor(yellow);
             updateDirection(range);
             seeObject = true;
-            
+
             /*
             if ((LaserL.objectDistance(mm) <= range && (LaserR.objectDistance(mm) > 500)) || (LaserR.objectDistance(mm) <= range && (LaserL.objectDistance(mm) > 500))) {
               if (LaserL.objectDistance(mm) <= range && (LaserR.objectDistance(mm) > 500)) { //Only LaserL sees object
@@ -304,31 +303,31 @@ int omniControl() {
               }
             }
             */
-            
+
             stickForward = autoFollowSpeed; //Track object at autoFollowSpeed velocity
           }
-          
-          
-          
+
+
+
           else { //If object not in range
             screenColor(orange); //Set cortex color to ORANGE
             seeObject = false;
             updateConsole();
             stickForward = 0.0;
-            
+
             if (objLeft) {
               stickRotate = autoTurnSpeed * -1.0; //Rotate left based on last known object direction
             }
-            
+
             else {
               stickRotate = autoTurnSpeed; //Rotate right based on last known object direction
             }
           }
-          
-          
+
+
           updateVelocity(1, false);
           spinMotors();
-        
+
         }
         else if (atLine) { //If robot over line
           screenColor(white); //Set cortex color to WHITE
@@ -367,7 +366,7 @@ int omniControl() {
     }
     wait(5, msec);
   }
-  
+
   return 0;
 }
 
