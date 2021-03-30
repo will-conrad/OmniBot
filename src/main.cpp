@@ -1,15 +1,15 @@
 // ---- START VEXCODE CONFIGURED DEVICES ----
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
-// Controller1          controller
-// North1               motor         1
-// South2               motor         2
-// West3L               motor         3
-// East4R               motor         4
-// LaserL               distance      10
-// LaserR               distance      11
-// BorderDetector       line          B
-// StopButton           bumper        C
+// Controller1          controller                    
+// North1               motor         1               
+// South2               motor         2               
+// West3L               motor         3               
+// East4R               motor         4               
+// LaserL               distance      10              
+// LaserR               distance      11              
+// BorderDetector       line          B               
+// StopButton           bumper        C               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 #include<vex.h>
 #include<iostream>
