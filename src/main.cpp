@@ -12,6 +12,7 @@
 // StopButton           bumper        C               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 #include<vex.h>
+#include<cmath>
 #include<iostream>
 
 using namespace vex;
@@ -26,7 +27,8 @@ void checkObject();
 void screenColor(color c);
 float LaserAvg(distanceUnits units);
 bool laserInRange(int range, distanceUnits units);
-bool degMove(int dir, float in, float deg, int v);
+void degMove(int dir, float in, float deg, int v);
+void laserDistanceOut();
 
 int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, range;
 float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, autoTurnSpeed, autoFollowSpeed, autoFocus, charge, distLMem, distRMem;
@@ -93,7 +95,7 @@ void checkLine() {
   }
 }
 void checkObject() {
-  if (laserAvg(mm) > 1 && laserAvg(mm) < 100) {
+  if (laserAvg(mm) > 1 && laserAvg(mm) < 150) {
     nearObject = true;
   }
   else {
@@ -110,6 +112,7 @@ bool laserInRange(int range, distanceUnits units) {
 }
 void updateConsole() {
   if (init || braking != brakeMem || autonomous != autoMem || atLine != lineMem || laserInRange(range, mm) != detectMem || nearObject != objMem || objLeft != leftMem) {
+    std::cout << "OUTPUT" <<std::endl;
     Brain.Screen.clearScreen(); //Clear Text
     Brain.Screen.setCursor(1, 1);
     Brain.Screen.setFillColor(black);
@@ -165,7 +168,7 @@ void updateConsole() {
     leftMem = objLeft;
   }
 }
-bool degMove(int dir, float in, float deg, int v) {
+void degMove(int dir, float in, float deg, int v) {
   updateVelocity(v, true);
   if (dir == 1) { //Forward
     float wheelDeg = in / 0.05;
@@ -209,30 +212,34 @@ bool degMove(int dir, float in, float deg, int v) {
     East4R.spinFor(wheelDeg, degrees, false);
     West3L.spinFor(wheelDeg * -1, degrees, true);
   }
-  return true;
+  
 }
 void screenColor(color c) {
   Brain.Screen.setFillColor(c);
   Brain.Screen.drawRectangle(270, 0, 210, 272);
-  updateConsole();
+  //updateConsole();
 }
 void updateDirection(int r) {
-  if (LaserL.objectDistance(mm) <= r && (LaserR.objectDistance(mm) > LaserL.objectDistance(mm) + 20)) { //Only LaserL sees object
-    objLeft = true;
+  if (LaserL.objectDistance(mm) <= r && (LaserR.objectDistance(mm) > LaserL.objectDistance(mm) + 5)) { //Only LaserL sees object
+    //objLeft = true;
+    objLeft = false;
     stickRotate = autoFocus * -1; //Rotate left
   }
-  else if (LaserR.objectDistance(mm) <= r && (LaserL.objectDistance(mm) > LaserR.objectDistance(mm) + 20)) { //Only LaserR sees object
-    objLeft = false;
+  else if (LaserR.objectDistance(mm) <= r && (LaserL.objectDistance(mm) > LaserR.objectDistance(mm) + 5)) { //Only LaserR sees object
+    //objLeft = false;
+    objLeft = true;
     stickRotate = autoFocus; //Rotate right
   }
   else {
     stickRotate = 0;
   }
+  updateVelocity(1, false);
 }
 void laserDistanceOut() {
   if (LaserL.objectDistance(mm) != distLMem) {
-    Brain.Screen.clearLine(1);
-    Brain.Screen.setCursor(Brain.Screen.row(), 1);
+    //Brain.Screen.setFillColor(black);
+    Controller1.Screen.clearLine(1);
+    
 
     Controller1_precision = 1;
     Controller1.Screen.setCursor(1, 1);
@@ -242,8 +249,9 @@ void laserDistanceOut() {
     distLMem = LaserL.objectDistance(mm);
   }
   if (LaserR.objectDistance(mm) != distRMem) {
-    Brain.Screen.clearLine(2);
-    Brain.Screen.setCursor(Brain.Screen.row(), 1);
+    //Brain.Screen.setFillColor(black);
+    Controller1.Screen.clearLine(2);
+    
 
     Controller1_precision = 1;
     Controller1.Screen.setCursor(2, 1);
@@ -268,20 +276,20 @@ int omniControl() {
   autoFollowSpeed = 25.0; //Object track/approach speed
   autoTurnSpeed = 20.0;//-//Looking for object spin speed
   autoFocus = 15; //------//Correct to center strength
-  charge = 50; //---------//nearObject charge velocity
-  range = 500;
+  charge = 60; //---------//nearObject charge velocity
+  range = 800;
   atLine = false, nearObject = false, autonomous = false;
   while (true) { //Run Forever
     checkLine(); //Check if over boundary
     checkObject(); //Check if near object
-    laserDistanceOut(); //Output laser distance to controller
+    //laserDistanceOut(); //Output laser distance to controller
     checkButton();
 
     if (!braking) { //Not breaking
       unbrake(); //Release wheels
       if (autonomous) { //If bot is in autonomous mode
         if (!atLine && !nearObject) { //Not over line AND not near object
-          //screenColor(orange); //Set cortex color to ORANGE
+          screenColor(orange); //Set cortex color to ORANGE
 
           if (laserInRange(range, mm)) { //Object obstructs either laser
             screenColor(yellow);
@@ -312,7 +320,7 @@ int omniControl() {
           else { //If object not in range
             screenColor(orange); //Set cortex color to ORANGE
             seeObject = false;
-            updateConsole();
+            
             stickForward = 0.0;
 
             if (objLeft) {
@@ -332,16 +340,18 @@ int omniControl() {
         else if (atLine) { //If robot over line
           screenColor(white); //Set cortex color to WHITE
           degMove(5, 0, 180, 50); //Spin 180deg with a velocity of 50
-          degMove(1, 7, 0, 40); //Move forward 7in with a velocity of 40
-          autonomous = false;
+          degMove(1, 10, 0, 40); //Move forward 7in with a velocity of 40
+          //autonomous = false;
         }
         else if (nearObject && charge > 1) {  //If near object AND charge velocity set
           if (BorderDetector.value(percent) <= 10) { //Check if at arena border or robot picked up
             screenColor(white); //Set cortex color to WHITE
-            braking = true;
+            degMove(2, 5, 0, 50);
+            //braking = true;
           }
           else { //Charge sequence
             screenColor(purple); //Set cortex color to PURPLE
+            //degMove(2, 5, 0, 50);
             updateVelocity(charge, true); //Set velocity to charge velocity
             spinMotors(); //Update motor spin
           }
@@ -352,12 +362,35 @@ int omniControl() {
         }
       }
       else { //Use controller input
+        int thres = 10;
         screenColor(green); //Set cortex color to GREEN
+        /*
+        if (abs(Controller1.Axis1.position()) > thres) {
+          stickRotate = Controller1.Axis1.position();
+        }
+        else {
+          updateVelocity(0, true);
+        }
+        if (abs(Controller1.Axis3.position()) > thres) {
+          stickForward = Controller1.Axis3.position();
+        }
+        else {
+          updateVelocity(0, true);
+        }
+        if (abs(Controller1.Axis4.position()) > thres) {
+          stickSideways = Controller1.Axis4.position();
+        }
+        else {
+          updateVelocity(0, true);
+        }
+        */
         stickRotate = Controller1.Axis1.position();
         stickForward = Controller1.Axis3.position();
         stickSideways = Controller1.Axis4.position();
+        
         updateVelocity(1, false); //Update velocity by stick input
         spinMotors();
+      
       }
     }
     else if (braking) {
@@ -366,7 +399,7 @@ int omniControl() {
     }
     wait(5, msec);
   }
-
+  
   return 0;
 }
 
@@ -383,11 +416,32 @@ void onEvent_ButtonR1Pressed() { //R1 Pressed
   autonomous = !autonomous;
 }
 
+void onEvent_ButtonUpPressed() { //Up
+  Controller1.rumble(rumbleShort);
+  degMove(1, 10, 0, 50);
+  screenColor(red);
+  
+}
+void onevent_ButtonDown_pressed_0() { //Down
+  degMove(2, 10, 0, 30);
+}
+void onevent_ButtonLeft_pressed_0() { //Left
+  degMove(3, 10, 0, 30);
+}
+void onevent_ButtonRight_pressed_0() { //Right
+  degMove(4, 10, 0, 30);
+}
+
 // ---- REGISTER EVENT HANDLERS ---- // -- INT MAIN -- //
 int main() {
   Controller1.ButtonL1.pressed(onEvent_ButtonL1Pressed);
   Controller1.ButtonL1.released(onEvent_ButtonL1Released);
   Controller1.ButtonR1.pressed(onEvent_ButtonR1Pressed);
+
+  Controller1.ButtonUp.pressed(onEvent_ButtonUpPressed);
+  Controller1.ButtonDown.pressed(onevent_ButtonDown_pressed_0);
+  Controller1.ButtonLeft.pressed(onevent_ButtonLeft_pressed_0);
+  Controller1.ButtonRight.pressed(onevent_ButtonRight_pressed_0);
 
   wait(15, msec);
 
