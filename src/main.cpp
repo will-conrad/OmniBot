@@ -30,7 +30,7 @@ bool laserInRange(int range, distanceUnits units);
 void degMove(int dir, float in, float deg, int v);
 void laserDistanceOut();
 
-int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, range;
+int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, range, count = 1, chargeDT = 500;
 float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, autoTurnSpeed, autoFollowSpeed, autoFocus, charge, distLMem, distRMem;
 bool init = true, useController, autonomous, objLeft, braking, atLine, nearObject, seeObject, brakeMem, autoMem, lineMem, detectMem, objMem, leftMem, inRange;
 
@@ -217,15 +217,15 @@ void degMove(int dir, float in, float deg, int v) {
 void screenColor(color c) {
   Brain.Screen.setFillColor(c);
   Brain.Screen.drawRectangle(270, 0, 210, 272);
-  //updateConsole();
+  updateConsole();
 }
 void updateDirection(int r) {
-  if (LaserL.objectDistance(mm) <= r && (LaserR.objectDistance(mm) > LaserL.objectDistance(mm) + 5)) { //Only LaserL sees object
+  if (LaserL.objectDistance(mm) <= r && (LaserR.objectDistance(mm) > LaserL.objectDistance(mm) + 20)) { //Only LaserL sees object
     //objLeft = true;
     objLeft = false;
     stickRotate = autoFocus * -1; //Rotate left
   }
-  else if (LaserR.objectDistance(mm) <= r && (LaserL.objectDistance(mm) > LaserR.objectDistance(mm) + 5)) { //Only LaserR sees object
+  else if (LaserR.objectDistance(mm) <= r && (LaserL.objectDistance(mm) > LaserR.objectDistance(mm) + 20)) { //Only LaserR sees object
     //objLeft = false;
     objLeft = true;
     stickRotate = autoFocus; //Rotate right
@@ -234,6 +234,7 @@ void updateDirection(int r) {
     stickRotate = 0;
   }
   updateVelocity(1, false);
+  spinMotors();
 }
 void laserDistanceOut() {
   if (LaserL.objectDistance(mm) != distLMem) {
@@ -263,10 +264,34 @@ void laserDistanceOut() {
 }
 void checkButton() {
   if (StopButton.pressing()) { //Emergency stop button
+      
       braking = true;
       autonomous = false;
       Controller1.rumble(rumbleShort);
   }
+}
+void checkContrArrows() {
+  if (Controller1.ButtonUp.pressing()) {
+      degMove(1, 10, 0, 50);
+  }
+  if (Controller1.ButtonDown.pressing()) {
+      degMove(2, 10, 0, 50);
+  }
+  if (Controller1.ButtonLeft.pressing()) {
+      degMove(3, 10, 0, 50);
+  }
+  if (Controller1.ButtonRight.pressing()) {
+      degMove(4, 10, 0, 50);
+  }
+}
+
+int controllerTread() {
+  while (true) {
+    laserDistanceOut();
+    this_thread::sleep_for( 25 );
+  }
+
+  return 0;
 }
 // ===========================================================================================================
 
@@ -275,11 +300,13 @@ int omniControl() {
   //Autonomous speeds
   autoFollowSpeed = 25.0; //Object track/approach speed
   autoTurnSpeed = 20.0;//-//Looking for object spin speed
-  autoFocus = 15; //------//Correct to center strength
+  autoFocus = 20; //------//Correct to center strength
   charge = 60; //---------//nearObject charge velocity
-  range = 800;
+  range = 850;
   atLine = false, nearObject = false, autonomous = false;
   while (true) { //Run Forever
+    
+    
     checkLine(); //Check if over boundary
     checkObject(); //Check if near object
     //laserDistanceOut(); //Output laser distance to controller
@@ -295,22 +322,6 @@ int omniControl() {
             screenColor(yellow);
             updateDirection(range);
             seeObject = true;
-
-            /*
-            if ((LaserL.objectDistance(mm) <= range && (LaserR.objectDistance(mm) > 500)) || (LaserR.objectDistance(mm) <= range && (LaserL.objectDistance(mm) > 500))) {
-              if (LaserL.objectDistance(mm) <= range && (LaserR.objectDistance(mm) > 500)) { //Only LaserL sees object
-                objLeft = true;
-                stickRotate = autoFocus * -1; //Rotate left
-              }
-              else if (LaserR.objectDistance(mm) <= range && (LaserL.objectDistance(mm) > 500)) { //Only LaserR sees object
-                objLeft = false;
-                stickRotate = autoFocus; //Rotate right
-              }
-              else {
-                stickRotate = 0;
-              }
-            }
-            */
 
             stickForward = autoFollowSpeed; //Track object at autoFollowSpeed velocity
           }
@@ -332,7 +343,6 @@ int omniControl() {
             }
           }
 
-
           updateVelocity(1, false);
           spinMotors();
 
@@ -343,18 +353,28 @@ int omniControl() {
           degMove(1, 10, 0, 40); //Move forward 7in with a velocity of 40
           //autonomous = false;
         }
-        else if (nearObject && charge > 1) {  //If near object AND charge velocity set
-          if (BorderDetector.value(percent) <= 10) { //Check if at arena border or robot picked up
-            screenColor(white); //Set cortex color to WHITE
-            degMove(2, 5, 0, 50);
-            //braking = true;
+        if (nearObject && count <= chargeDT) {
+          
+          updateDirection(range);
+          
+          if (nearObject && charge > 1) {  //If near object AND charge velocity set
+            
+            if (BorderDetector.value(percent) <= 10) { //Check if at arena border or robot picked up
+              screenColor(white); //Set cortex color to WHITE
+              degMove(2, 10, 0, 50); //Go back 10 in
+              count = 0;
+            }
+            else { //Charge sequence
+              count++;
+              screenColor(purple); //Set cortex color to PURPLE
+              updateVelocity(charge, true); //Set velocity to charge velocity
+              spinMotors(); //Update motor spin
+            }
           }
-          else { //Charge sequence
-            screenColor(purple); //Set cortex color to PURPLE
-            //degMove(2, 5, 0, 50);
-            updateVelocity(charge, true); //Set velocity to charge velocity
-            spinMotors(); //Update motor spin
-          }
+        }
+        else if (nearObject && count > chargeDT) {
+          degMove(2, 20, 0, 50); //Go back 10 in
+          count = 0;
         }
         else if (nearObject && charge == 0) { //If near object AND no charge velocity set
           updateVelocity(0, true); //Stop
@@ -362,28 +382,9 @@ int omniControl() {
         }
       }
       else { //Use controller input
-        int thres = 10;
+       
         screenColor(green); //Set cortex color to GREEN
-        /*
-        if (abs(Controller1.Axis1.position()) > thres) {
-          stickRotate = Controller1.Axis1.position();
-        }
-        else {
-          updateVelocity(0, true);
-        }
-        if (abs(Controller1.Axis3.position()) > thres) {
-          stickForward = Controller1.Axis3.position();
-        }
-        else {
-          updateVelocity(0, true);
-        }
-        if (abs(Controller1.Axis4.position()) > thres) {
-          stickSideways = Controller1.Axis4.position();
-        }
-        else {
-          updateVelocity(0, true);
-        }
-        */
+        checkContrArrows();
         stickRotate = Controller1.Axis1.position();
         stickForward = Controller1.Axis3.position();
         stickSideways = Controller1.Axis4.position();
@@ -416,32 +417,15 @@ void onEvent_ButtonR1Pressed() { //R1 Pressed
   autonomous = !autonomous;
 }
 
-void onEvent_ButtonUpPressed() { //Up
-  Controller1.rumble(rumbleShort);
-  degMove(1, 10, 0, 50);
-  screenColor(red);
-  
-}
-void onevent_ButtonDown_pressed_0() { //Down
-  degMove(2, 10, 0, 30);
-}
-void onevent_ButtonLeft_pressed_0() { //Left
-  degMove(3, 10, 0, 30);
-}
-void onevent_ButtonRight_pressed_0() { //Right
-  degMove(4, 10, 0, 30);
-}
-
 // ---- REGISTER EVENT HANDLERS ---- // -- INT MAIN -- //
 int main() {
+  vexcodeInit();
+
+  thread t( controllerTread );
+  
   Controller1.ButtonL1.pressed(onEvent_ButtonL1Pressed);
   Controller1.ButtonL1.released(onEvent_ButtonL1Released);
   Controller1.ButtonR1.pressed(onEvent_ButtonR1Pressed);
-
-  Controller1.ButtonUp.pressed(onEvent_ButtonUpPressed);
-  Controller1.ButtonDown.pressed(onevent_ButtonDown_pressed_0);
-  Controller1.ButtonLeft.pressed(onevent_ButtonLeft_pressed_0);
-  Controller1.ButtonRight.pressed(onevent_ButtonRight_pressed_0);
 
   wait(15, msec);
 
