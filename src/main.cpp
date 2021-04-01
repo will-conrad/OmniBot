@@ -16,6 +16,7 @@
 #include<iostream>
 
 using namespace vex;
+
 // ---- Initialization ---- //
 void spinMotors();
 void updateVelocity(int n, bool useIn);
@@ -327,25 +328,22 @@ int omniControl() {
           screenColor(orange); //Set cortex color to ORANGE
           if (laserInRange(range)) { //Object obstructs either laser
             seeObject = true;
-            screenColor(yellow);
-            updateDirection(range);
+            screenColor(yellow); //set cortex color to YELLOW 
+            updateDirection(range); //Update left/right
             stickForward = autoFollowSpeed; //Track object at autoFollowSpeed velocity
           }
           else { //If object not in range
             screenColor(orange); //Set cortex color to ORANGE
             seeObject = false;
-            
-            stickForward = 0.0;
+            stickForward = 0.0; //Stop going forward
 
-            if (objLeft) {
+            if (objLeft) { //LEFT
               stickRotate = autoTurnSpeed * -1.0; //Rotate left based on last known object direction
             }
-
-            else {
+            else { //RIGHT
               stickRotate = autoTurnSpeed; //Rotate right based on last known object direction
             }
           }
-
           updateVelocity(1, false);
           spinMotors();
         }
@@ -355,17 +353,16 @@ int omniControl() {
           degMove(1, 10, 0, 40); //Move forward 7in with a velocity of 40
           //autonomous = false;
         }
-        if (nearObject && count <= chargeDT) {
-          
-          updateDirection(range);
-          
+        if (nearObject && count <= chargeDT) { //nearObject AND still counting
+          updateDirection(range); //Update left/right
+      
           if (nearObject && charge > 1) {  //If near object AND charge velocity set
             if (BorderDetector.value(percent) <= 10) { //Check if at arena border or robot picked up
               screenColor(white); //Set cortex color to WHITE
               degMove(2, 10, 0, 50); //Go back 10 in
               count = 0;
             }
-            else { //Charge sequence
+            else { //NORMAL Charge sequence
               count++;
               screenColor(purple); //Set cortex color to PURPLE
               updateVelocity(charge, true); //Set velocity to charge velocity
