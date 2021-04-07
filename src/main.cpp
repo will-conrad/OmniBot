@@ -320,6 +320,7 @@ void laserDistanceOut() {
 
     distAvgMem = laserAvg();
   }
+  //Angle
   Controller1.Screen.clearLine(4);
   Controller1_precision = 1;
   Controller1.Screen.setCursor(4, 1);
