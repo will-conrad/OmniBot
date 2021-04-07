@@ -280,6 +280,7 @@ void updateDirection() {
     else if (aDeg > 0) { //+
       objLeft = true; //Positive = left
     }
+    std::cout << "Object is " << aDeg << " degrees" std::endl;
   }
   else if (LaserL.isObjectDetected()) { //Only LaserL sees object
     objLeft = true
@@ -293,7 +294,7 @@ void updateDirection() {
   }
   
   
-  //std::cout << a * 10 << std::endl;
+  
   
 
   updateVelocity(1, false);
