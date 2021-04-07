@@ -27,16 +27,23 @@ void checkLine();
 void checkObject();
 bool laserInRange(int range);
 void updateConsole();
+void count();
 void degMove(int dir, float in, float deg, int v);
 void screenColor(color c);
-void updateDirection(int r);
+void updateDirection();
 void laserDistanceOut();
 void checkButton();
 void checkContrArrows();
 int controllerThread();
 
-int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, range, count = 1, chargeDT;
-float northV, southV, eastV, westV, stickRotate, stickForward, stickSideways, autoTurnSpeed, autoFollowSpeed, autoFocus, charge, distLMem, distRMem, distAvgMem;
+int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, range, chargeDT;
+float northV, southV, eastV, westV;
+float stickRotate, stickForward, stickSideways;
+float autoTurnSpeed, autoFollowSpeed, autoFocus;
+float distLMem, distRMem, distAvgMem;
+
+float pi = 3.141592, counter = 1, charge, chargeRange, distDiff, L, R, aRad, aDeg, angleScale = 1, autoAngle;
+
 bool init = true, useController, autonomous = false, objLeft, braking, atLine = false, nearObject = false, seeObject, brakeMem, autoMem, lineMem, detectMem, objMem, leftMem, inRange;
 
 // ---- FUNCTIONS ---- //
@@ -100,7 +107,7 @@ void checkLine() {
   }
 }
 void checkObject() {
-  if (laserAvg() > 1 && laserAvg() < 150) {
+  if (laserAvg() > 1 && laserAvg() < chargeRange) {
     nearObject = true;
   }
   else {
@@ -108,7 +115,7 @@ void checkObject() {
   }
 }
 bool laserInRange(int range) {
-  if ((LaserL.objectDistance(mm) <= range && LaserL.objectDistance(mm) > 1) || (LaserR.objectDistance(mm) <= range && LaserR.objectDistance(mm) > 1)) {
+  if ((LaserL.objectDistance(mm) <= range && LaserL.isObjectDetected()) || (LaserR.objectDistance(mm) <= range && LaserR.isObjectDetected())) {
     return true;
   }
   else {
@@ -117,7 +124,6 @@ bool laserInRange(int range) {
 }
 void updateConsole() {
   if (init || braking != brakeMem || autonomous != autoMem || atLine != lineMem || laserInRange(range) != detectMem || nearObject != objMem || objLeft != leftMem) {
-    std::cout << "OUTPUT" <<std::endl;
     Brain.Screen.clearScreen(); //Clear Text
     Brain.Screen.setCursor(1, 1);
     Brain.Screen.setFillColor(black);
@@ -180,44 +186,45 @@ void updateConsole() {
 }
 void degMove(int dir, float in, float deg, int v) {
   updateVelocity(v, true);
+  float wheelDeg;
   switch(dir) {
     case 1:
-      float wheelDeg = in / 0.05;
+      wheelDeg = in / 0.05;
       North1.spinFor(wheelDeg, degrees, false);
       South2.spinFor(wheelDeg, degrees, false);
       West3L.spinFor(wheelDeg, degrees, false);
       East4R.spinFor(wheelDeg, degrees, true);
       break;
     case 2:
-      float wheelDeg = in / -0.05;
+      wheelDeg = in / -0.05;
       North1.spinFor(wheelDeg, degrees, false);
       South2.spinFor(wheelDeg, degrees, false);
       West3L.spinFor(wheelDeg, degrees, false);
       East4R.spinFor(wheelDeg, degrees, true);
       break;
     case 3:
-      float wheelDeg = in / 0.05;
+      wheelDeg = in / 0.05;
       North1.spinFor(wheelDeg * -1, degrees, false);
       South2.spinFor(wheelDeg * -1, degrees, false);
       West3L.spinFor(wheelDeg, degrees, false);
       East4R.spinFor(wheelDeg, degrees, true);
       break;
-    case 4;
-      float wheelDeg = in / 0.05;
+    case 4:
+      wheelDeg = in / 0.05;
       North1.spinFor(wheelDeg, degrees, false);
       South2.spinFor(wheelDeg, degrees, false);
       West3L.spinFor(wheelDeg * -1, degrees, false);
       East4R.spinFor(wheelDeg * -1, degrees, true);
       break;
     case 5:
-      float wheelDeg = deg / 0.279;
+      wheelDeg = deg / 0.279;
       North1.spinFor(wheelDeg, degrees, false);
       South2.spinFor(wheelDeg * -1, degrees, false);
       East4R.spinFor(wheelDeg * -1, degrees, false);
       West3L.spinFor(wheelDeg, degrees, true);
       break;
     case 6:
-      float wheelDeg = deg / 0.279;
+      wheelDeg = deg / 0.279;
       North1.spinFor(wheelDeg * -1, degrees, false);
       South2.spinFor(wheelDeg, degrees, false);
       East4R.spinFor(wheelDeg, degrees, false);
@@ -230,20 +237,65 @@ void screenColor(color c) {
   Brain.Screen.drawRectangle(270, 0, 210, 272);
   updateConsole();
 }
-void updateDirection(int r) {
-  if (LaserL.objectDistance(mm) <= r && (LaserR.objectDistance(mm) > LaserL.objectDistance(mm) + 20)) { //Only LaserL sees object
+void updateDirection() {
+  /*
+  if (LaserL.objectDistance(mm) <= r && (LaserR.objectDistance(mm) > LaserL.objectDistance(mm) + dif)) { //Only LaserL sees object
     //objLeft = true;
     objLeft = false;
-    stickRotate = autoFocus * -1; //Rotate left
+    stickRotate = (LaserR.objectDistance(mm)/autoFocus) * -1; //Rotate left
   }
-  else if (LaserR.objectDistance(mm) <= r && (LaserL.objectDistance(mm) > LaserR.objectDistance(mm) + 20)) { //Only LaserR sees object
+  else if (LaserR.objectDistance(mm) <= r && (LaserL.objectDistance(mm) > LaserR.objectDistance(mm) + dif)) { //Only LaserR sees object
     //objLeft = false;
     objLeft = true;
-    stickRotate = autoFocus; //Rotate right
+    stickRotate = LaserL.objectDistance(mm)/autoFocus; //Rotate right
   }
-  else {
-    stickRotate = 0;
+  */
+  L = LaserL.objectDistance(mm);
+  R = LaserR.objectDistance(mm);
+
+  if (LaserL.isObjectDetected() && LaserR.isObjectDetected()) { //Object detected by both lasers
+    distDiff = R - L; //Difference between lasers
+    aRad = atan(distDiff / 33); //Get angle of object in radians
+    aDeg = aRad * (180/pi); //Calculate degrees
+    autoAngle = aDeg * angleScale; //Scale result
+    ///*
+    if (abs(autoAngle) < 1) {
+      stickRotate = 0;
+
+    }
+    else {
+      stickRotate = autoAngle;
+    }
+    */
+    stickRotate = (autoAngle * -1) / autoFocus; //Set rotation to scaled output
+    if (!nearObject) {
+      stickSideways = autoAngle; //Set sideways transform to scaled output
+    }
+    else {
+      stickSideways = 0;
+    }
+    if (aDeg < 0) { //-
+      objLeft = false; // Negative = right
+    }
+    else if (aDeg > 0) { //+
+      objLeft = true; //Positive = left
+    }
   }
+  else if (LaserL.isObjectDetected()) { //Only LaserL sees object
+    objLeft = true
+    stickRotate = autoTurnSpeed * -1.0;
+    stickSideways = 0;
+  }
+  else if (LaserR.isObjectDetected()) {
+    objLeft = false;
+    stickRotate = autoTurnSpeed;
+    stickSideways = 0;
+  }
+  
+  
+  //std::cout << a * 10 << std::endl;
+  
+
   updateVelocity(1, false);
   spinMotors();
 }
@@ -274,6 +326,20 @@ void laserDistanceOut() {
     Controller1.Screen.print(laserAvg());
 
     distAvgMem = laserAvg();
+  }
+  Controller1.Screen.clearLine(4);
+  Controller1_precision = 1;
+  Controller1.Screen.setCursor(4, 1);
+  Controller1.Screen.print("Turn Num: ");
+  Controller1.Screen.print(a);
+}
+void count() {
+  double x = 10;
+  if ((laserAvg() < LaserL.objectDistance(mm) - x) && (laserAvg() < LaserR.objectDistance(mm) - 10)) {
+    counter = counter + 0.7;
+  }
+  else {
+    counter = counter + 1;
   }
 }
 void checkButton() {
@@ -313,6 +379,7 @@ int omniControl() {
   autoTurnSpeed = 20.0;//-//Looking for object spin speed
   autoFocus = 20; //------//Correct to center strength
   charge = 60; //---------//nearObject charge velocity
+  chargeRange = 150; //----//Range to start charging (mm)
   range = 850; //---------//Range to start tracking object (mm)
   chargeDT = 500; //------//Charge timer before backing up (cycles)
 
@@ -328,8 +395,8 @@ int omniControl() {
           screenColor(orange); //Set cortex color to ORANGE
           if (laserInRange(range)) { //Object obstructs either laser
             seeObject = true;
+            updateDirection(); //Update left/right
             screenColor(yellow); //set cortex color to YELLOW 
-            updateDirection(range); //Update left/right
             stickForward = autoFollowSpeed; //Track object at autoFollowSpeed velocity
           }
           else { //If object not in range
@@ -353,26 +420,24 @@ int omniControl() {
           degMove(1, 10, 0, 40); //Move forward 7in with a velocity of 40
           //autonomous = false;
         }
-        if (nearObject && count <= chargeDT) { //nearObject AND still counting
-          updateDirection(range); //Update left/right
-      
-          if (nearObject && charge > 1) {  //If near object AND charge velocity set
-            if (BorderDetector.value(percent) <= 10) { //Check if at arena border or robot picked up
-              screenColor(white); //Set cortex color to WHITE
-              degMove(2, 10, 0, 50); //Go back 10 in
-              count = 0;
-            }
-            else { //NORMAL Charge sequence
-              count++;
-              screenColor(purple); //Set cortex color to PURPLE
-              updateVelocity(charge, true); //Set velocity to charge velocity
-              spinMotors(); //Update motor spin
-            }
+        if (nearObject && counter <= chargeDT) { //nearObject AND still counting
+          updateDirection(); //Update left/right
+
+          if (BorderDetector.value(percent) <= 10) { //Check if at arena border or robot picked up
+            screenColor(white); //Set cortex color to WHITE
+            degMove(2, 10, 0, 50); //Go back 10 in
+            counter = 0;
+          }
+          else { //NORMAL Charge sequence
+            count();
+            screenColor(purple); //Set cortex color to PURPLE
+            updateVelocity(charge, true); //Set velocity to charge velocity
+            spinMotors(); //Update motor spin
           }
         }
-        else if (nearObject && count > chargeDT) {
+        else if (nearObject && counter > chargeDT) {
           degMove(2, 20, 0, 50); //Go back 10 in
-          count = 0;
+          counter = 0;
         }
         else if (nearObject && charge == 0) { //If near object AND no charge velocity set
           updateVelocity(0, true); //Stop
