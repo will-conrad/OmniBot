@@ -258,15 +258,7 @@ void updateDirection() {
     aRad = atan(distDiff / 33); //Get angle of object in radians
     aDeg = aRad * (180/pi); //Calculate degrees
     autoAngle = aDeg * angleScale; //Scale result
-    ///*
-    if (abs(autoAngle) < 1) {
-      stickRotate = 0;
-
-    }
-    else {
-      stickRotate = autoAngle;
-    }
-    */
+   
     stickRotate = (autoAngle * -1) / autoFocus; //Set rotation to scaled output
     if (!nearObject) {
       stickSideways = autoAngle; //Set sideways transform to scaled output
@@ -280,10 +272,10 @@ void updateDirection() {
     else if (aDeg > 0) { //+
       objLeft = true; //Positive = left
     }
-    std::cout << "Object is " << aDeg << " degrees" std::endl;
+    std::cout << "Object is " << aDeg << " degrees" << std::endl;
   }
   else if (LaserL.isObjectDetected()) { //Only LaserL sees object
-    objLeft = true
+    objLeft = true;
     stickRotate = autoTurnSpeed * -1.0;
     stickSideways = 0;
   }
@@ -331,8 +323,8 @@ void laserDistanceOut() {
   Controller1.Screen.clearLine(4);
   Controller1_precision = 1;
   Controller1.Screen.setCursor(4, 1);
-  Controller1.Screen.print("Turn Num: ");
-  Controller1.Screen.print(a);
+  Controller1.Screen.print("Object angle: ");
+  Controller1.Screen.print(aDeg);
 }
 void count() {
   double x = 10;
