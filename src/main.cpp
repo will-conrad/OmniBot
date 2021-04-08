@@ -41,8 +41,8 @@ float northV, southV, eastV, westV;
 float stickRotate, stickForward, stickSideways;
 float autoTurnSpeed, autoFollowSpeed, autoFocus;
 float distLMem, distRMem, distAvgMem;
-
-float pi = 3.141592, counter = 1, charge, chargeRange, distDiff, L, R, aRad, aDeg, angleScale = 1, autoAngle;
+const float pi = 3.141592;
+float counter = 1, charge, chargeRange, distDiff, L, R, aRad, aDeg, angleScale = 1, autoAngle;
 
 bool init = true, useController, autonomous = false, objLeft, braking, atLine = false, nearObject = false, seeObject, brakeMem, autoMem, lineMem, detectMem, objMem, leftMem, inRange;
 
