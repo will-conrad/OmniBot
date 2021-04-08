@@ -374,7 +374,7 @@ int omniControl() {
   autoFocus = 20; //------//Correct to center strength
   charge = 60; //---------//nearObject charge velocity
   chargeRange = 150; //----//Range to start charging (mm)
-  range = 850; //---------//Range to start tracking object (mm)
+  range = 1000; //---------//Range to start tracking object (mm)
   chargeDT = 500; //------//Charge timer before backing up (cycles)
 
   while (true) { //Run Forever
