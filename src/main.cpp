@@ -42,7 +42,7 @@ float stickRotate, stickForward, stickSideways;
 float autoTurnSpeed, autoFollowSpeed, autoFocus;
 float distLMem, distRMem, distAvgMem;
 const float pi = 3.141592;
-float counter = 1, charge, chargeRange, distDiff, L, R, aRad, aDeg, angleScale = 1, autoAngle;
+float counter = 1, charge, chargeRange, scaling, distDiff, L, R, aRad, aDeg, angleScale, autoAngle;
 
 bool init = true, useController, autonomous = false, objLeft, braking, atLine = false, nearObject = false, seeObject, brakeMem, autoMem, lineMem, detectMem, objMem, leftMem, inRange;
 
@@ -252,16 +252,20 @@ void updateDirection() {
   */
   L = LaserL.objectDistance(mm);
   R = LaserR.objectDistance(mm);
+  
+  scaling = 9; //Bigger = less intense by distance avg
+  angleScale = 10; //Bigger = larger angles.
 
   if (LaserL.isObjectDetected() && LaserR.isObjectDetected()) { //Object detected by both lasers
     distDiff = R - L; //Difference between lasers
     aRad = atan(distDiff / 33); //Get angle of object in radians
     aDeg = aRad * (180/pi); //Calculate degrees
-    autoAngle = aDeg * angleScale; //Scale result
+    autoAngle = (aDeg * angleScale) / (laserAvg() / scaling); //Scale result
    
-    stickRotate = (autoAngle * -1) / autoFocus; //Set rotation to scaled output
+    stickRotate = (autoAngle * -1); //Set rotation to scaled output
     if (!nearObject) {
-      stickSideways = autoAngle; //Set sideways transform to scaled output
+      //Set sideways transform to scaled output
+      stickSideways = autoAngle; 
     }
     else {
       stickSideways = 0;
@@ -284,10 +288,6 @@ void updateDirection() {
     stickRotate = autoTurnSpeed;
     stickSideways = 0;
   }
-  
-  
-  
-  
 
   updateVelocity(1, false);
   spinMotors();
@@ -312,6 +312,7 @@ void laserDistanceOut() {
     distRMem = LaserR.objectDistance(mm);
   }
   if (laserAvg() != distAvgMem) {
+    /*
     Controller1.Screen.clearLine(3);
     Controller1_precision = 1;
     Controller1.Screen.setCursor(3, 1);
@@ -319,12 +320,13 @@ void laserDistanceOut() {
     Controller1.Screen.print(laserAvg());
 
     distAvgMem = laserAvg();
+    */
   }
   //Angle
   Controller1.Screen.clearLine(4);
   Controller1_precision = 1;
   Controller1.Screen.setCursor(4, 1);
-  Controller1.Screen.print("Object angle: ");
+  Controller1.Screen.print("Obj angle: ");
   Controller1.Screen.print(aDeg);
 }
 void count() {
@@ -340,6 +342,7 @@ void checkButton() {
   if (StopButton.pressing()) { //Emergency stop button
       braking = true;
       autonomous = false;
+      counter = 0;
       //Controller1.rumble(rumbleShort);
   }
 }
@@ -375,7 +378,7 @@ int omniControl() {
   charge = 60; //---------//nearObject charge velocity
   chargeRange = 150; //----//Range to start charging (mm)
   range = 1000; //---------//Range to start tracking object (mm)
-  chargeDT = 500; //------//Charge timer before backing up (cycles)
+  chargeDT = 850; //------//Charge timer before backing up (cycles)
 
   while (true) { //Run Forever
     checkLine(); //Check if over boundary
