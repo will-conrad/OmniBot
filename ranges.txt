@@ -1,0 +1,2 @@
+Laser effective range: 1900mm
+Ultrasonic effective range: 2500
