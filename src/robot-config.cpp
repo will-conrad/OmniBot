@@ -17,6 +17,7 @@ distance LaserL = distance(PORT10);
 distance LaserR = distance(PORT11);
 line BorderDetector = line(Brain.ThreeWirePort.B);
 bumper StopButton = bumper(Brain.ThreeWirePort.C);
+sonar RearDistance = sonar(Brain.ThreeWirePort.E);
 
 // VEXcode generated functions
 // define variable for remote controller enable/disable

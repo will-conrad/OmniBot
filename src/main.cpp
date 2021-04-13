@@ -1,21 +1,24 @@
 // ---- START VEXCODE CONFIGURED DEVICES ----
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
-// Controller1          controller                    
-// North1               motor         1               
-// South2               motor         2               
-// West3L               motor         3               
-// East4R               motor         4               
-// LaserL               distance      10              
-// LaserR               distance      11              
-// BorderDetector       line          B               
-// StopButton           bumper        C               
+// Controller1          controller
+// North1               motor         1
+// South2               motor         2
+// West3L               motor         3
+// East4R               motor         4
+// LaserL               distance      10
+// LaserR               distance      11
+// BorderDetector       line          B
+// StopButton           bumper        C
+// RearDistance         sonar         E, F
 // ---- END VEXCODE CONFIGURED DEVICES ----
 #include<vex.h>
 #include<cmath>
 #include<iostream>
 
 using namespace vex;
+
+#define newl printf("\n");
 
 // ---- Initialization ---- //
 void spinMotors();
@@ -31,18 +34,26 @@ void count();
 void degMove(int dir, float in, float deg, int v);
 void screenColor(color c);
 void updateDirection();
-void laserDistanceOut();
+void controllerOut();
 void checkButton();
 void checkContrArrows();
-int controllerThread();
+int dataOutThread();
+void setResistance();
+
+struct clock {
+  int counter;
+};
 
 int Brain_precision = 0, Console_precision = 0, Controller1_precision = 0, range, chargeDT;
 float northV, southV, eastV, westV;
+
+float northResist, southResist, westResist, eastResist, avgResist;
+
 float stickRotate, stickForward, stickSideways;
 float autoTurnSpeed, autoFollowSpeed, autoFocus;
 float distLMem, distRMem, distAvgMem;
 const float pi = 3.141592;
-float counter = 1, charge, chargeRange, scaling, distDiff, L, R, aRad, aDeg, angleScale, autoAngle;
+float charge, chargeRange, scaling, turnScaling, turn, strafe, strafeScaling, aRad, aDeg, angleScale, objScaled;
 
 bool init = true, useController, autonomous = false, objLeft, braking, atLine = false, nearObject = false, seeObject, brakeMem, autoMem, lineMem, detectMem, objMem, leftMem, inRange;
 
@@ -89,10 +100,12 @@ void eBrake() { //
   East4R.setStopping(hold);
 }
 void unbrake() {
+
   North1.setStopping(coast);
   South2.setStopping(coast);
   West3L.setStopping(coast);
   East4R.setStopping(coast);
+
 }
 float laserAvg() {
   //Avg both laser inputs
@@ -128,7 +141,7 @@ void updateConsole() {
     Brain.Screen.setCursor(1, 1);
     Brain.Screen.setFillColor(black);
     //Braking
-    if (braking) { 
+    if (braking) {
       Brain.Screen.print("Braking: True\n");
     }
     else {
@@ -238,34 +251,28 @@ void screenColor(color c) {
   updateConsole();
 }
 void updateDirection() {
-  /*
-  if (LaserL.objectDistance(mm) <= r && (LaserR.objectDistance(mm) > LaserL.objectDistance(mm) + dif)) { //Only LaserL sees object
-    //objLeft = true;
-    objLeft = false;
-    stickRotate = (LaserR.objectDistance(mm)/autoFocus) * -1; //Rotate left
-  }
-  else if (LaserR.objectDistance(mm) <= r && (LaserL.objectDistance(mm) > LaserR.objectDistance(mm) + dif)) { //Only LaserR sees object
-    //objLeft = false;
-    objLeft = true;
-    stickRotate = LaserL.objectDistance(mm)/autoFocus; //Rotate right
-  }
-  */
-  L = LaserL.objectDistance(mm);
-  R = LaserR.objectDistance(mm);
-  
-  scaling = 9; //Bigger = less intense by distance avg
-  angleScale = 10; //Bigger = larger angles.
+  scaling = 5; //Bigger = less intense by distance avg
+  turnScaling = 2;
+  strafeScaling = 2;
 
+  if (nearObject) {
+    angleScale = 20; //Bigger = larger angles.
+  }
+  else {
+    angleScale = 10; //Bigger = larger angles.
+  }
   if (LaserL.isObjectDetected() && LaserR.isObjectDetected()) { //Object detected by both lasers
-    distDiff = R - L; //Difference between lasers
-    aRad = atan(distDiff / 33); //Get angle of object in radians
+    aRad = atan((LaserR.objectDistance(mm) - LaserL.objectDistance(mm)) / 33); //Get angle of object in radians
     aDeg = aRad * (180/pi); //Calculate degrees
-    autoAngle = (aDeg * angleScale) / (laserAvg() / scaling); //Scale result
-   
-    stickRotate = (autoAngle * -1); //Set rotation to scaled output
+    objScaled = aDeg / (laserAvg() / scaling); //Scale result
+
+    turn = objScaled * turnScaling;
+    strafe = objScaled * strafeScaling;
+
+    stickRotate = (turn * -1); //Set rotation to scaled output
     if (!nearObject) {
       //Set sideways transform to scaled output
-      stickSideways = autoAngle; 
+      stickSideways = strafe;
     }
     else {
       stickSideways = 0;
@@ -292,58 +299,32 @@ void updateDirection() {
   updateVelocity(1, false);
   spinMotors();
 }
-void laserDistanceOut() {
-  if (LaserL.objectDistance(mm) != distLMem) {
-    Controller1.Screen.clearLine(1);
-    Controller1_precision = 1;
-    Controller1.Screen.setCursor(1, 1);
-    Controller1.Screen.print("LaserL: ");
-    Controller1.Screen.print(LaserL.objectDistance(mm));
-    
-    distLMem = LaserL.objectDistance(mm);
-  }
-  if (LaserR.objectDistance(mm) != distRMem) {
-    Controller1.Screen.clearLine(2);
-    Controller1_precision = 1;
-    Controller1.Screen.setCursor(2, 1);
-    Controller1.Screen.print("LaserR: ");
-    Controller1.Screen.print(LaserR.objectDistance(mm));
-    
-    distRMem = LaserR.objectDistance(mm);
-  }
-  if (laserAvg() != distAvgMem) {
-    /*
-    Controller1.Screen.clearLine(3);
-    Controller1_precision = 1;
-    Controller1.Screen.setCursor(3, 1);
-    Controller1.Screen.print("Laser Avg: ");
-    Controller1.Screen.print(laserAvg());
-
-    distAvgMem = laserAvg();
-    */
-  }
-  //Angle
-  Controller1.Screen.clearLine(4);
-  Controller1_precision = 1;
-  Controller1.Screen.setCursor(4, 1);
-  Controller1.Screen.print("Obj angle: ");
-  Controller1.Screen.print(aDeg);
+void setResistance() {
+  northResist = northV - North1.velocity(percent);
+  southResist = southV - South2.velocity(percent);
+  westResist = westV - West3L.velocity(percent);
+  eastResist = eastV - East4R.velocity(percent);
+  avgResist = ((northV - North1.velocity(percent)) + (southV - South2.velocity(percent)) + (westV - West3L.velocity(percent)) + (eastV - East4R.velocity(percent))) / 4;
 }
-void count() {
-  double x = 10;
-  if ((laserAvg() < LaserL.objectDistance(mm) - x) && (laserAvg() < LaserR.objectDistance(mm) - 10)) {
-    counter = counter + 0.7;
-  }
-  else {
-    counter = counter + 1;
-  }
+void controllerOut() {
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1, 1);
+  Controller1.Screen.print("LaserL: ");
+  Controller1.Screen.print(LaserL.objectDistance(mm));
+
+  Controller1.Screen.setCursor(2, 1);
+  Controller1.Screen.print("LaserR: ");
+  Controller1.Screen.print(LaserR.objectDistance(mm));
+
+  Controller1.Screen.setCursor(3, 1);
+  Controller1.Screen.print("Rear: ");
+  Controller1.Screen.print(RearDistance.distance(mm));
 }
 void checkButton() {
   if (StopButton.pressing()) { //Emergency stop button
       braking = true;
       autonomous = false;
-      counter = 0;
-      //Controller1.rumble(rumbleShort);
+      Controller1.rumble(rumbleShort);
   }
 }
 void checkContrArrows() {
@@ -360,9 +341,33 @@ void checkContrArrows() {
       degMove(4, 10, 0, 50);
   }
 }
-int controllerThread() {
+int dataOutThread() {
+  struct clock dataOut; //Terminal printer downtime
+  updateVelocity(0, false);
+  setResistance();
+
   while (true) {
-    laserDistanceOut();
+    if (dataOut.counter == 30) {
+      printf("\033[2J\n"); //Clear
+      printf("Motor 1 (North) Velocity: [Intended: %f%%][Actual: %f%%][Resistance: %f%%]\n", northV, North1.velocity(percent), northResist);
+      printf("Motor 2 (South) Velocity: [Intended: %f%%][Actual: %f%%][Resistance: %f%%]\n", southV, South2.velocity(percent), southResist);
+      printf("Motor 3 (West)  Velocity: [Intended: %f%%][Actual: %f%%][Resistance: %f%%]\n", westV, West3L.velocity(percent), westResist);
+      printf("Motor 4 (East)  Velocity: [Intended: %f%%][Actual: %f%%][Resistance: %f%%]\n", eastV, East4R.velocity(percent), eastResist);
+      newl;
+      printf("[Left laser: %f]  |  [Right laser: %f]\n", LaserL.objectDistance(mm), LaserR.objectDistance(mm));
+      printf("Rear sonar:  %f\n", RearDistance.distance(mm));
+      printf("Object angle: %fº\n", (180/pi) * (atan((LaserR.objectDistance(mm) - LaserL.objectDistance(mm)) / 33)));
+      newl;
+
+
+
+
+
+
+    }
+    else {
+      dataOut.counter++;
+    }
     this_thread::sleep_for( 25 );
   }
   return 0;
@@ -371,29 +376,34 @@ int controllerThread() {
 
 // ---- MAIN DRIVE CONTROL ---- //
 int omniControl() {
+
+  struct clock DT; //Charge downtime clock
+
   //Autonomous values
-  autoFollowSpeed = 25.0; //Object track/approach speed
+  autoFollowSpeed = 20.0; //Object track/approach speed
   autoTurnSpeed = 20.0;//-//Looking for object spin speed
   autoFocus = 20; //------//Correct to center strength
   charge = 60; //---------//nearObject charge velocity
-  chargeRange = 150; //----//Range to start charging (mm)
-  range = 1000; //---------//Range to start tracking object (mm)
+  chargeRange = 150; //---//Range to start charging (mm)
+  range = 1450; //--------//Range to start tracking object (mm)
   chargeDT = 850; //------//Charge timer before backing up (cycles)
 
   while (true) { //Run Forever
+
     checkLine(); //Check if over boundary
     checkObject(); //Check if near object
     checkButton(); //Check emerg button
 
     if (!braking) { //Not braking
-      unbrake(); //Release wheels
+
       if (autonomous) { //If bot is in autonomous mode
+
         if (!atLine && !nearObject) { //Not over line AND not near object
           screenColor(orange); //Set cortex color to ORANGE
           if (laserInRange(range)) { //Object obstructs either laser
             seeObject = true;
             updateDirection(); //Update left/right
-            screenColor(yellow); //set cortex color to YELLOW 
+            screenColor(yellow); //set cortex color to YELLOW
             stickForward = autoFollowSpeed; //Track object at autoFollowSpeed velocity
           }
           else { //If object not in range
@@ -415,39 +425,40 @@ int omniControl() {
           screenColor(white); //Set cortex color to WHITE
           degMove(5, 0, 180, 50); //Spin 180deg with a velocity of 50
           degMove(1, 10, 0, 40); //Move forward 7in with a velocity of 40
-          //autonomous = false;
         }
-        if (nearObject && counter <= chargeDT) { //nearObject AND still counting
+        if (nearObject && DT.counter <= chargeDT) { //nearObject AND still counting
           updateDirection(); //Update left/right
 
           if (BorderDetector.value(percent) <= 10) { //Check if at arena border or robot picked up
             screenColor(white); //Set cortex color to WHITE
             degMove(2, 10, 0, 50); //Go back 10 in
-            counter = 0;
+            DT.counter = 0; //Reset downtime clock
           }
           else { //NORMAL Charge sequence
-            count();
+            DT.counter = DT.counter + 1;
             screenColor(purple); //Set cortex color to PURPLE
             updateVelocity(charge, true); //Set velocity to charge velocity
             spinMotors(); //Update motor spin
           }
         }
-        else if (nearObject && counter > chargeDT) {
+        else if (nearObject && DT.counter > chargeDT) { //Near object and counter done
           degMove(2, 20, 0, 50); //Go back 10 in
-          counter = 0;
+          DT.counter = 0; //Reset counter
         }
         else if (nearObject && charge == 0) { //If near object AND no charge velocity set
           updateVelocity(0, true); //Stop
           braking = true;
         }
       }
-      else { //Use controller input   
+      else { //Use controller input
+        unbrake(); //Wheels coast
         screenColor(green); //Set cortex color to GREEN
         checkContrArrows();
+        DT.counter = 0; //Reset counter
         stickRotate = Controller1.Axis1.position();
         stickForward = Controller1.Axis3.position();
         stickSideways = Controller1.Axis4.position();
-        
+
         updateVelocity(1, false); //Update velocity by stick input
         spinMotors();
       }
@@ -468,7 +479,9 @@ void onEvent_ButtonL1Pressed() { //L1 Pressed
 }
 void onEvent_ButtonL1Released() { //L1 Released
   braking = false;
-  unbrake();
+  if (!autonomous) {
+    unbrake();
+  }
 }
 void onEvent_ButtonR1Pressed() { //R1 Pressed
   //Toggle autonomous mode
@@ -479,8 +492,8 @@ void onEvent_ButtonR1Pressed() { //R1 Pressed
 int main() {
   vexcodeInit();
 
-  thread t(controllerThread);
-  
+  thread t(dataOutThread);
+
   Controller1.ButtonL1.pressed(onEvent_ButtonL1Pressed);
   Controller1.ButtonL1.released(onEvent_ButtonL1Released);
   Controller1.ButtonR1.pressed(onEvent_ButtonR1Pressed);

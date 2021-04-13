@@ -12,6 +12,7 @@ extern distance LaserL;
 extern distance LaserR;
 extern line BorderDetector;
 extern bumper StopButton;
+extern sonar RearDistance;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Pro.
